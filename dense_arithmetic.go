@@ -245,8 +245,8 @@ func (A *DenseMatrix) TimesDenseFill(B, C *DenseMatrix) (err error) {
 		default:
 			for i := 0; i < A.rows; i++ {
 				sums := C.elements[i*C.step : (i+1)*C.step]
-				for k, a := range A.elements[i*A.step : i*A.step + A.cols] {
-					for j, b := range B.elements[k*B.step : k * B.step + B.cols] {
+				for k, a := range A.elements[i*A.step : i*A.step+A.cols] {
+					for j, b := range B.elements[k*B.step : k*B.step+B.cols] {
 						sums[j] += a * b
 					}
 				}
@@ -287,6 +287,18 @@ func (A *DenseMatrix) ElementMultDense(B *DenseMatrix) (*DenseMatrix, error) {
 	return C, err
 }
 
+func (A *DenseMatrix) ElementDiv(B MatrixRO) (Matrix, error) {
+	C := A.Copy()
+	err := C.InvScaleMatrix(B)
+	return C, err
+}
+
+func (A *DenseMatrix) ElementDivDense(B *DenseMatrix) (*DenseMatrix, error) {
+	C := A.Copy()
+	err := C.InvScaleMatrixDense(B)
+	return C, err
+}
+
 func (A *DenseMatrix) Scale(f float64) {
 	for i := 0; i < A.rows; i++ {
 		index := i * A.step
@@ -324,6 +336,40 @@ func (A *DenseMatrix) ScaleMatrixDense(B *DenseMatrix) error {
 		indexB := i * B.step
 		for j := 0; j < A.cols; j++ {
 			A.elements[indexA] *= B.elements[indexB]
+			indexA++
+			indexB++
+		}
+	}
+	return nil
+}
+
+func (A *DenseMatrix) InvScaleMatrix(B MatrixRO) error {
+	if Bd, ok := B.(*DenseMatrix); ok {
+		return A.InvScaleMatrixDense(Bd)
+	}
+
+	if A.rows != B.Rows() || A.cols != B.Cols() {
+		return ErrorDimensionMismatch
+	}
+	for i := 0; i < A.rows; i++ {
+		indexA := i * A.step
+		for j := 0; j < A.cols; j++ {
+			A.elements[indexA] /= B.Get(i, j)
+			indexA++
+		}
+	}
+	return nil
+}
+
+func (A *DenseMatrix) InvScaleMatrixDense(B *DenseMatrix) error {
+	if A.rows != B.rows || A.cols != B.cols {
+		return ErrorDimensionMismatch
+	}
+	for i := 0; i < A.rows; i++ {
+		indexA := i * A.step
+		indexB := i * B.step
+		for j := 0; j < A.cols; j++ {
+			A.elements[indexA] /= B.elements[indexB]
 			indexA++
 			indexB++
 		}
